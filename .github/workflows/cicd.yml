@@ -48,7 +48,7 @@ jobs:
         docker tag flask-cicd-demo ${{ secrets.DOCKERHUB_USERNAME }}/flask-cicd-demo:latest
         docker push ${{ secrets.DOCKERHUB_USERNAME }}/flask-cicd-demo:latest
 
-        - name: Test SSH Connection
+    - name: Test SSH Connection
       uses: appleboy/ssh-action@v0.1.10
       with:
         host: ${{ secrets.EC2_HOST }}
