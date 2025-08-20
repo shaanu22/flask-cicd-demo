@@ -63,3 +63,8 @@ resource "aws_volume_attachment" "my_data_attachment" {
   volume_id   = aws_ebs_volume.my_data_volume.id
   instance_id = aws_instance.my_ec2.id
 }
+
+output "ec2_host" {
+  description = "The public IP address of the EC2 instance"
+  value       = aws_instance.my_ec2.public_ip
+}
