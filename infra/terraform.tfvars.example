@@ -1,0 +1,9 @@
+ami_id             = "ami-xxxxxxxx"
+instance_type      = "t2.micro"
+subnet_id          = "subnet-xxxxxxx"
+security_group_id  = "sg-xxxxxxx"
+key_name           = "your-key"
+spot_max_price     = "0.05"
+instance_name      = "example-ec2"
+volume_size        = 8
+volume_type        = "gp3"
