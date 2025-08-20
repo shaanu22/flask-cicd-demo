@@ -67,7 +67,7 @@ jobs:
 
     - name: Terraform Apply
       id: apply
-      run: terraform apply -auto-approve -var-file="infra/terraform.tfvars"
+      run: terraform apply -auto-approve -var-file="terraform.tfvars"
       working-directory: ./infra
 
     - name: Get EC2 Host IP
