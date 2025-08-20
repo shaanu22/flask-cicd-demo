@@ -53,6 +53,9 @@ variable "volume_type" {
 }
 
 variable "dockerhub_username" {}
+
 variable "dockerhub_token" {
   sensitive = true
 }
+
+variable "availability_zone" {}
