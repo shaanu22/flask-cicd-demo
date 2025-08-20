@@ -1,0 +1,59 @@
+name: Destroy Infrastructure
+
+on:
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  destroy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.0.11"
+
+      - name: Terraform Init
+        run: terraform init
+        working-directory: ./infra
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: us-east-1
+
+      - name: Get EC2 Host IP
+        id: get_ip
+        run: |
+          EC2_HOST_IP=$(terraform output -raw ec2_host)
+          echo "EC2_HOST=$EC2_HOST_IP" >> $GITHUB_ENV
+        working-directory: ./infra
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: us-east-1
+
+      - name: Cleanup Docker on EC2
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ env.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "Stopping and removing Docker containers..."
+            docker stop flask-cicd || true
+            docker rm flask-cicd || true
+            docker rmi ${{ secrets.DOCKERHUB_USERNAME }}/flask-cicd-demo:latest || true
+            echo "✅ Docker cleanup finished"
+
+      - name: Terraform Destroy
+        run: |
+          terraform plan -destroy -out=tfplan
+          terraform apply -auto-approve tfplan
+        working-directory: ./infra
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: us-east-1
