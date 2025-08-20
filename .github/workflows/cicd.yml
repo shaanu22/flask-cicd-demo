@@ -63,16 +63,19 @@ jobs:
 
     - name: Terraform Init
       run: terraform init
+      working-directory: ./infra
 
     - name: Terraform Apply
       id: apply
       run: terraform apply -auto-approve
+      working-directory: ./infra
 
     - name: Get EC2 Host IP
       id: get_ip
       run: |
         EC2_HOST_IP=$(terraform output -raw ec2_host)
         echo "EC2_HOST=$EC2_HOST_IP" >> $GITHUB_ENV
+      working-directory: ./infra
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
