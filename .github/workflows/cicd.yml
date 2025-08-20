@@ -60,7 +60,7 @@ jobs:
           uname -a
           docker --version || echo "⚠️ Docker not installed on EC2"
 
-    - name: Deploy to EC2 (Staging)
+    - name: Deploy to EC2
       uses: appleboy/ssh-action@v0.1.10
       with:
         host: ${{ secrets.EC2_HOST }}
@@ -69,45 +69,49 @@ jobs:
         script: |
           echo "🚀 Starting deployment on EC2..."
 
-          # Docker login (required for private images)
-          sudo docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
+          # Ensure Docker is installed and running
+          sudo systemctl start docker
+          sudo systemctl enable docker
 
-          echo "🔽 Pulling latest Docker image..."
+          # Secure Docker login
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | sudo docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+
+          # Pull latest Docker image
           sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/flask-cicd-demo:latest
 
-          echo "🛑 Stopping old container (if exists)..."
+          # Stop old container if exists
           sudo docker stop flask-cicd || true
-
-          echo "🗑️ Removing old container (if exists)..."
           sudo docker rm flask-cicd || true
 
-          echo "▶️ Running new container..."
+          # Mount persistent EBS volume
+          sudo mkdir -p /mnt/data
+          sudo mount /dev/xvdf /mnt/data || true
+
+          # Run new container with persistent volume and restart policy
           sudo docker run -d -p 80:5000 --restart unless-stopped --name flask-cicd \
             -v /mnt/data:/app/data \
             ${{ secrets.DOCKERHUB_USERNAME }}/flask-cicd-demo:latest
 
           echo "✅ Deployment finished successfully!"
 
-    
-        # - name: Deploy to EC2 (Staging)
-    #   uses: appleboy/ssh-action@v0.1.10
-    #   with:
-    #     host: ${{ secrets.EC2_HOST }}
-    #     username: ubuntu
-    #     key: ${{ secrets.EC2_SSH_KEY }}
-    #     script: |
-    #       docker pull ${{ secrets.DOCKERHUB_USERNAME }}/flask-cicd-demo:latest
-    #       docker stop flask-cicd || true
-    #       docker rm flask-cicd || true
-    #       docker run -d -p 5000:5000 --name flask-cicd ${{ secrets.DOCKERHUB_USERNAME }}/flask-cicd-demo:latest
-    
-    - name: Slack Notification
+    - name: Slack Notification Failure
       if: failure()
       uses: slackapi/slack-github-action@v1.24.0
       with:
         payload: |
           {
             "text": "🚨 CI/CD Pipeline failed for ${{ github.repository }} on ${{ github.ref }}"
+          }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    - name: Slack Notification Success
+      if: success()
+      uses: slackapi/slack-github-action@v1.24.0
+      with:
+        payload: |
+          {
+            "text": "✅ CI/CD Pipeline succeeded for ${{ github.repository }} on ${{ github.ref }}"
           }
       env:
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
