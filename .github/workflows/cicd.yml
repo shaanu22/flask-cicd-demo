@@ -48,22 +48,40 @@ jobs:
         docker tag flask-cicd-demo ${{ secrets.DOCKERHUB_USERNAME }}/flask-cicd-demo:latest
         docker push ${{ secrets.DOCKERHUB_USERNAME }}/flask-cicd-demo:latest
 
-    - name: Test SSH Connection
-      uses: appleboy/ssh-action@v0.1.10
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
       with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ubuntu
-        key: ${{ secrets.EC2_SSH_KEY }}
-        script: |
-          echo "✅ Connected to EC2 successfully"
-          whoami
-          uname -a
-          docker --version || echo "⚠️ Docker not installed on EC2"
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1 # Replace with your region
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: "1.0.11" # Use your desired version
+
+
+    - name: Terraform Init
+      run: terraform init
+
+    - name: Terraform Apply
+      id: apply
+      run: terraform apply -auto-approve
+
+    - name: Get EC2 Host IP
+      id: get_ip
+      run: |
+        EC2_HOST_IP=$(terraform output -raw ec2_host)
+        echo "EC2_HOST=$EC2_HOST_IP" >> $GITHUB_ENV
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: us-east-1
 
     - name: Deploy to EC2
       uses: appleboy/ssh-action@v0.1.10
       with:
-        host: ${{ secrets.EC2_HOST }}
+        host: ${{ env.EC2_HOST }}
         username: ubuntu
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
@@ -93,6 +111,20 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/flask-cicd-demo:latest
 
           echo "✅ Deployment finished successfully!"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     - name: Slack Notification Failure
       if: failure()
