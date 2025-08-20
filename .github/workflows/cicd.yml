@@ -68,6 +68,10 @@ jobs:
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
           echo "🚀 Starting deployment on EC2..."
+
+          # Docker login (required for private images)
+          docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
+
           echo "🔽 Pulling latest Docker image..."
           docker pull ${{ secrets.DOCKERHUB_USERNAME }}/flask-cicd-demo:latest
 
@@ -78,7 +82,9 @@ jobs:
           docker rm flask-cicd || true
 
           echo "▶️ Running new container..."
-          docker run -d -p 5000:5000 --name flask-cicd ${{ secrets.DOCKERHUB_USERNAME }}/flask-cicd-demo:latest
+          docker run -d -p 80:5000 --restart unless-stopped --name flask-cicd \
+            -v /mnt/data:/app/data \
+            ${{ secrets.DOCKERHUB_USERNAME }}/flask-cicd-demo:latest
 
           echo "✅ Deployment finished successfully!"
 

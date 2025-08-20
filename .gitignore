@@ -1,7 +1,27 @@
+# Terraform
+*.tfstate
+*.tfstate.backup
+*.tfvars
+.terraform/
+.terraform.lock.hcl
+
+# Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-*.env
+*.pytest_cache/
+
+# Virtual Environment
 .venv/
+env/
+venv/
+
+# Docker
 *.log
+
+# System / IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
