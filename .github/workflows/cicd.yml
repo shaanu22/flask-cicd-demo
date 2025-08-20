@@ -67,7 +67,18 @@ jobs:
 
     - name: Terraform Apply
       id: apply
-      run: terraform apply -auto-approve -var-file="terraform.tfvars"
+      run: terraform apply -auto-approve \
+        -var="ami_id=${{ vars.TF_AMI_ID }}" \
+        -var="instance_type=${{ vars.TF_INSTANCE_TYPE }}" \
+        -var="subnet_id=${{ secrets.SUBNET_ID }}" \
+        -var="security_group_id=${{ secrets.SECURITY_GROUP_ID }}" \
+        -var="key_name=${{ secrets.EC2_SSH_KEY_NAME }}" \
+        -var="spot_max_price=${{ vars.TF_SPOT_MAX_PRICE }}" \
+        -var="instance_name=${{ vars.TF_INSTANCE_NAME }}" \
+        -var="volume_size=${{ vars.TF_VOLUME_SIZE }}" \
+        -var="volume_type=${{ vars.TF_VOLUME_TYPE }}" \
+        -var="dockerhub_username=${{ secrets.DOCKERHUB_USERNAME }}" \
+        -var="dockerhub_token=${{ secrets.DOCKERHUB_TOKEN }}"
       working-directory: ./infra
 
     - name: Get EC2 Host IP
