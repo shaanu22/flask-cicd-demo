@@ -41,7 +41,7 @@ resource "aws_instance" "my_ec2" {
   }
 
   lifecycle {
-    create_before_destroy = true
+    create_before_destroy = false
   }
 }
 
