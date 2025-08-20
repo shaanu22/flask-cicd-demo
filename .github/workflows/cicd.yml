@@ -67,7 +67,7 @@ jobs:
 
     - name: Terraform Apply
       id: apply
-      run: terraform apply -auto-approve
+      run: terraform apply -auto-approve -var-file="infra/terraform.tfvars"
       working-directory: ./infra
 
     - name: Get EC2 Host IP
@@ -114,20 +114,6 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/flask-cicd-demo:latest
 
           echo "✅ Deployment finished successfully!"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     - name: Slack Notification Failure
       if: failure()
