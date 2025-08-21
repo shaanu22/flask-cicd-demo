@@ -30,3 +30,11 @@ jobs:
       - name: Terraform Destroy
         run: terraform destroy -auto-approve
         working-directory: ./infra
+        env:
+          TF_VAR_ami_id:             ${{ vars.AMI_ID }}
+          TF_VAR_availability_zone:  ${{ vars.AWS_AVAILABILITY_ZONE }}
+          TF_VAR_instance_name:      ${{ vars.INSTANCE_NAME }}
+          TF_VAR_instance_type:      ${{ vars.INSTANCE_TYPE }}
+          TF_VAR_spot_max_price:     ${{ vars.SPOT_MAX_PRICE }}
+          TF_VAR_volume_size:        ${{ vars.VOLUME_SIZE }}
+          TF_VAR_volume_type:        ${{ vars.VOLUME_TYPE }}
