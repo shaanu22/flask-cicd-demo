@@ -67,19 +67,20 @@ jobs:
 
     - name: Terraform Apply
       id: apply
-      run: terraform apply -auto-approve \
-        -var="ami_id=${{ vars.AMI_ID }}" \
-        -var="instance_type=${{ vars.INSTANCE_TYPE }}" \
-        -var="subnet_id=${{ secrets.SUBNET_ID }}" \
-        -var="security_group_id=${{ secrets.SECURITY_GROUP_ID }}" \
-        -var="key_name=${{ secrets.EC2_KEY_NAME }}" \
-        -var="spot_max_price=${{ vars.SPOT_MAX_PRICE }}" \
-        -var="instance_name=${{ vars.INSTANCE_NAME }}" \
-        -var="volume_size=${{ vars.VOLUME_SIZE }}" \
-        -var="volume_type=${{ vars.VOLUME_TYPE }}" \
-        -var="dockerhub_username=${{ secrets.DOCKERHUB_USERNAME }}" \
-        -var="dockerhub_token=${{ secrets.DOCKERHUB_TOKEN }}" \
-        -var="availability_zone=${{ vars.AVAILABILITY_ZONE }}"
+      run: |
+        terraform apply -auto-approve \
+          -var="ami_id=${{ vars.AMI_ID }}" \
+          -var="instance_type=${{ vars.INSTANCE_TYPE }}" \
+          -var="subnet_id=${{ secrets.SUBNET_ID }}" \
+          -var="security_group_id=${{ secrets.SECURITY_GROUP_ID }}" \
+          -var="key_name=${{ secrets.EC2_KEY_NAME }}" \
+          -var="spot_max_price=${{ vars.SPOT_MAX_PRICE }}" \
+          -var="instance_name=${{ vars.INSTANCE_NAME }}" \
+          -var="volume_size=${{ vars.VOLUME_SIZE }}" \
+          -var="volume_type=${{ vars.VOLUME_TYPE }}" \
+          -var="dockerhub_username=${{ secrets.DOCKERHUB_USERNAME }}" \
+          -var="dockerhub_token=${{ secrets.DOCKERHUB_TOKEN }}" \
+          -var="availability_zone=${{ vars.AVAILABILITY_ZONE }}"
       working-directory: ./infra
 
     - name: Get EC2 Host IP
