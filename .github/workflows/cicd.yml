@@ -1,138 +1,143 @@
-# name: CI/CD Pipeline
+name: CI/CD Pipeline
 
-# on:
-#   push:
-#     branches: [ "main" ]
-#   pull_request:
-#     branches: [ "main" ]
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
-# jobs:
-#   build-test-scan-deploy:
-#     runs-on: ubuntu-latest
+jobs:
+  build-test-scan-deploy:
+    runs-on: ubuntu-latest
 
-#     steps:
-#     - name: Checkout Code
-#       uses: actions/checkout@v3
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
 
-#     - name: Set up Python
-#       uses: actions/setup-python@v4
-#       with:
-#         python-version: '3.9'
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
 
-#     - name: Install Dependencies
-#       run: |
-#         pip install -r requirements.txt
-#         pip install -r test-requirements.txt
+    - name: Install Dependencies
+      run: |
+        pip install -r requirements.txt
+        pip install -r test-requirements.txt
 
-#     - name: Run Tests
-#       run: pytest
+    - name: Run Tests
+      run: pytest
 
-#     - name: Build Docker Image
-#       run: docker build -t flask-cicd-demo -f ./Dockerfile .
+    - name: Build Docker Image
+      run: docker build -t flask-cicd-demo -f ./Dockerfile .
 
-#     - name: Security Scan with Trivy
-#       uses: aquasecurity/trivy-action@master
-#       with:
-#         image-ref: 'flask-cicd-demo'
-#         format: 'table'
-#         exit-code: '0'
+    - name: Security Scan with Trivy
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'flask-cicd-demo'
+        format: 'table'
+        exit-code: '0'
 
-#     - name: Login to DockerHub
-#       uses: docker/login-action@v2
-#       with:
-#         username: ${{ secrets.DOCKERHUB_USERNAME }}
-#         password: ${{ secrets.DOCKERHUB_TOKEN }}
+    - name: Login to DockerHub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-#     - name: Push Docker Image
-#       run: |
-#         docker tag flask-cicd-demo ${{ secrets.DOCKERHUB_USERNAME }}/flask-cicd-demo:latest
-#         docker push ${{ secrets.DOCKERHUB_USERNAME }}/flask-cicd-demo:latest
+    - name: Push Docker Image
+      run: |
+        docker tag flask-cicd-demo ${{ secrets.DOCKERHUB_USERNAME }}/flask-cicd-demo:latest
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/flask-cicd-demo:latest
 
-#     - name: Configure AWS Credentials
-#       uses: aws-actions/configure-aws-credentials@v4
-#       with:
-#         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#         aws-region: us-east-1 # Replace with your region
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ vars.AWS_REGION }} # Use a variable for consistency
 
-#     - name: Setup Terraform
-#       uses: hashicorp/setup-terraform@v3
-#       with:
-#         terraform_version: "1.0.11" # Use your desired version
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: "1.0.11"
 
 
-#     - name: Terraform Init
-#       run: terraform init
-#       working-directory: ./infra
+    - name: Terraform Init
+      run: terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" -backend-config="key=${{ secrets.TF_STATE_KEY }}" -backend-config="region=${{ vars.AWS_REGION }}"
+      working-directory: ./infra
 
-#     - name: Terraform Apply
-#       id: apply
-#       run: terraform apply -auto-approve -var="ami_id=${{ vars.AMI_ID }}" -var="instance_type=${{ vars.INSTANCE_TYPE }}" -var="subnet_id=${{ secrets.SUBNET_ID }}" -var="security_group_id=${{ secrets.SECURITY_GROUP_ID }}" -var="key_name=${{ secrets.EC2_KEY_NAME }}" -var="spot_max_price=${{ vars.SPOT_MAX_PRICE }}" -var="instance_name=${{ vars.INSTANCE_NAME }}" -var="volume_size=${{ vars.VOLUME_SIZE }}" -var="volume_type=${{ vars.VOLUME_TYPE }}" -var="dockerhub_username=${{ secrets.DOCKERHUB_USERNAME }}" -var="dockerhub_token=${{ secrets.DOCKERHUB_TOKEN }}" -var="availability_zone=${{ vars.AVAILABILITY_ZONE }}"
-#       working-directory: ./infra
+    - name: Terraform Apply
+      id: apply
+      run: terraform apply -auto-approve \
+        -var="ami_id=${{ vars.AMI_ID }}" \
+        -var="instance_type=${{ vars.INSTANCE_TYPE }}" \
+        -var="subnet_id=${{ secrets.SUBNET_ID }}" \
+        -var="security_group_id=${{ secrets.SECURITY_GROUP_ID }}" \
+        -var="key_name=${{ secrets.EC2_KEY_NAME }}" \
+        -var="spot_max_price=${{ vars.SPOT_MAX_PRICE }}" \
+        -var="instance_name=${{ vars.INSTANCE_NAME }}" \
+        -var="volume_size=${{ vars.VOLUME_SIZE }}" \
+        -var="volume_type=${{ vars.VOLUME_TYPE }}" \
+        -var="dockerhub_username=${{ secrets.DOCKERHUB_USERNAME }}" \
+        -var="dockerhub_token=${{ secrets.DOCKERHUB_TOKEN }}" \
+        -var="availability_zone=${{ vars.AVAILABILITY_ZONE }}"
+      working-directory: ./infra
 
-#     - name: Get EC2 Host IP
-#       id: get_ip
-#       run: |
-#         EC2_HOST_IP=$(terraform output -raw ec2_host)
-#         echo "EC2_HOST=$EC2_HOST_IP" >> $GITHUB_ENV
-#       working-directory: ./infra
-#       env:
-#         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#         AWS_REGION: us-east-1
+    - name: Get EC2 Host IP
+      id: get_ip
+      run: |
+        EC2_HOST_IP=$(terraform output -raw ec2_host)
+        echo "EC2_HOST_IP=$EC2_HOST_IP" >> $GITHUB_ENV
+      working-directory: ./infra
 
-#     - name: Deploy to EC2
-#       uses: appleboy/ssh-action@v0.1.10
-#       with:
-#         host: ${{ env.EC2_HOST }}
-#         username: ubuntu
-#         key: ${{ secrets.EC2_SSH_KEY }}
-#         script: |
-#           echo "🚀 Starting deployment on EC2..."
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@v0.1.10
+      with:
+        host: ${{ env.EC2_HOST_IP }}
+        username: ubuntu
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          echo "🚀 Starting deployment on EC2..."
+          
+          # This step now handles the full deployment, ensuring consistency
+          sudo apt-get update
+          sudo apt-get install -y docker.io
+          sudo systemctl start docker
+          sudo systemctl enable docker
+          
+          # Secure Docker login
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | sudo docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
 
-#           # Ensure Docker is installed and running
-#           sudo systemctl start docker
-#           sudo systemctl enable docker
+          # Pull latest Docker image
+          sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/flask-cicd-demo:latest
 
-#           # Secure Docker login
-#           echo "${{ secrets.DOCKERHUB_TOKEN }}" | sudo docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+          # Stop and remove old container if it exists
+          sudo docker stop flask-cicd || true
+          sudo docker rm flask-cicd || true
 
-#           # Pull latest Docker image
-#           sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/flask-cicd-demo:latest
+          # Run new container with persistent volume and restart policy
+          sudo docker run -d -p 80:5000 --restart unless-stopped --name flask-cicd \
+            ${{ secrets.DOCKERHUB_USERNAME }}/flask-cicd-demo:latest
+          
+          echo "✅ Deployment finished successfully!"
 
-#           # Stop old container if exists
-#           sudo docker stop flask-cicd || true
-#           sudo docker rm flask-cicd || true
+    - name: Slack Notification Failure
+      if: failure()
+      uses: slackapi/slack-github-action@v1.24.0
+      with:
+        payload: |
+          {
+            "text": "🚨 CI/CD Pipeline failed for ${{ github.repository }} on ${{ github.ref }}"
+          }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
-#           # Mount persistent EBS volume
-#           sudo mkdir -p /mnt/data
-#           sudo mount /dev/xvdf /mnt/data || true
-
-#           # Run new container with persistent volume and restart policy
-#           sudo docker run -d -p 80:5000 --restart unless-stopped --name flask-cicd \
-#             -v /mnt/data:/app/data \
-#             ${{ secrets.DOCKERHUB_USERNAME }}/flask-cicd-demo:latest
-
-#           echo "✅ Deployment finished successfully!"
-
-#     - name: Slack Notification Failure
-#       if: failure()
-#       uses: slackapi/slack-github-action@v1.24.0
-#       with:
-#         payload: |
-#           {
-#             "text": "🚨 CI/CD Pipeline failed for ${{ github.repository }} on ${{ github.ref }}"
-#           }
-#       env:
-#         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
-#     - name: Slack Notification Success
-#       if: success()
-#       uses: slackapi/slack-github-action@v1.24.0
-#       with:
-#         payload: |
-#           {
-#             "text": "✅ CI/CD Pipeline succeeded for ${{ github.repository }} on ${{ github.ref }}"
-#           }
-#       env:
-#         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+    - name: Slack Notification Success
+      if: success()
+      uses: slackapi/slack-github-action@v1.24.0
+      with:
+        payload: |
+          {
+            "text": "✅ CI/CD Pipeline succeeded for ${{ github.repository }} on ${{ github.ref }}"
+          }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

@@ -1,12 +1,12 @@
 name: Destroy Infrastructure
 
 on:
-  workflow_dispatch:  # Manual trigger
+  workflow_dispatch:
 
 jobs:
   destroy:
     runs-on: ubuntu-latest
-
+    
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -16,7 +16,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+          aws-region: ${{ vars.AWS_REGION }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -24,142 +24,9 @@ jobs:
           terraform_version: "1.0.11"
 
       - name: Terraform Init
-        run: terraform init
+        run: terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" -backend-config="key=${{ secrets.TF_STATE_KEY }}" -backend-config="region=${{ vars.AWS_REGION }}"
         working-directory: ./infra
-
-      - name: Get EC2 Host IP
-        id: get_ip
-        run: |
-          EC2_HOST_IP=$(terraform output -raw ec2_host || echo "")
-          if [ -n "$EC2_HOST_IP" ]; then
-            echo "EC2_HOST=$EC2_HOST_IP" >> $GITHUB_ENV
-          else
-            echo "No EC2 host found, skipping SSH cleanup"
-          fi
-        working-directory: ./infra
-
-      - name: Cleanup Docker on EC2
-        if: env.EC2_HOST != ''
-        uses: appleboy/ssh-action@v0.1.10
-        with:
-          host: ${{ env.EC2_HOST }}
-          username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            echo "Stopping and removing Docker containers..."
-            docker stop flask-cicd || true
-            docker rm flask-cicd || true
-            docker rmi ${{ secrets.DOCKERHUB_USERNAME }}/flask-cicd-demo:latest || true
-            echo "✅ Docker cleanup finished"
 
       - name: Terraform Destroy
-        run: terraform destroy -auto-approve \
-          -var="ami_id=${{ vars.AMI_ID }}" \
-          -var="instance_type=${{ vars.INSTANCE_TYPE }}" \
-          -var="subnet_id=${{ secrets.SUBNET_ID }}" \
-          -var="security_group_id=${{ secrets.SECURITY_GROUP_ID }}" \
-          -var="key_name=${{ secrets.EC2_KEY_NAME }}" \
-          -var="spot_max_price=${{ vars.SPOT_MAX_PRICE }}" \
-          -var="instance_name=${{ vars.INSTANCE_NAME }}" \
-          -var="volume_size=${{ vars.VOLUME_SIZE }}" \
-          -var="volume_type=${{ vars.VOLUME_TYPE }}" \
-          -var="dockerhub_username=${{ secrets.DOCKERHUB_USERNAME }}" \
-          -var="dockerhub_token=${{ secrets.DOCKERHUB_TOKEN }}" \
-          -var="availability_zone=${{ vars.AVAILABILITY_ZONE }}"
+        run: terraform destroy -auto-approve
         working-directory: ./infra
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# name: Destroy Infrastructure
-
-# on:
-#   workflow_dispatch:  # Manual trigger
-
-# jobs:
-#   destroy:
-#     runs-on: ubuntu-latest
-
-#     steps:
-#       - name: Checkout Repository
-#         uses: actions/checkout@v3
-
-#       - name: Setup Terraform
-#         uses: hashicorp/setup-terraform@v3
-#         with:
-#           terraform_version: "1.0.11"
-
-#       - name: Terraform Init
-#         run: terraform init
-#         working-directory: ./infra
-#         env:
-#           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#           AWS_REGION: us-east-1
-
-#       - name: Get EC2 Host IP
-#         id: get_ip
-#         run: |
-#           echo "Initializing Terraform..."
-#           terraform init -input=false
-#           echo "Fetching EC2 host IP..."
-#           EC2_HOST_IP=$(terraform output -raw ec2_host || echo "")
-#           if [ -z "$EC2_HOST_IP" ]; then
-#             echo "Error: EC2 host IP not found. Make sure your Terraform output 'ec2_host' is defined."
-#             exit 1
-#           fi
-#           echo "EC2_HOST=$EC2_HOST_IP" >> $GITHUB_ENV
-#         working-directory: ./infra
-#         env:
-#           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#           AWS_REGION: us-east-1
-
-#       - name: Cleanup Docker on EC2
-#         uses: appleboy/ssh-action@v0.1.10
-#         with:
-#           host: ${{ env.EC2_HOST }}
-#           username: ubuntu
-#           key: ${{ secrets.EC2_SSH_KEY }}
-#           script: |
-#             echo "Stopping and removing Docker containers..."
-#             docker stop flask-cicd || true
-#             docker rm flask-cicd || true
-#             docker rmi ${{ secrets.DOCKERHUB_USERNAME }}/flask-cicd-demo:latest || true
-#             echo "✅ Docker cleanup finished"
-
-#       - name: Terraform Destroy
-#         run: |
-#           terraform plan -destroy -out=tfplan
-#           terraform apply -auto-approve tfplan
-#         working-directory: ./infra
-#         env:
-#           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#           AWS_REGION: us-east-1

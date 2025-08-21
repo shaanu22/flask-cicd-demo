@@ -7,3 +7,6 @@ spot_max_price     = "0.05"
 instance_name      = "example-ec2"
 volume_size        = 8
 volume_type        = "gp3"
+dockerhub_username = "unknown"
+dockerhub_token    = "abcsxxxxxxxxxxxxxxxx"
+availability_zone = "us-west-2"
