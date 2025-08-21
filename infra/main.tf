@@ -21,14 +21,14 @@ resource "aws_instance" "my_ec2" {
               EOF
 
   instance_market_options {
-    market_type = "spot"
-
-    spot_options {
-      instance_interruption_behavior = "stop" # stop instead of terminate
-      max_price                      = var.spot_max_price
-      spot_instance_type             = "persistent" # persistent instead of one-time
-    }
+  market_type = "spot"
+  
+  spot_options {
+    instance_interruption_behavior = "terminate" # Use "terminate"
+    max_price                      = var.spot_max_price
+    spot_instance_type             = "one-time" # Use "one-time"
   }
+}
 
 
   tags = {
